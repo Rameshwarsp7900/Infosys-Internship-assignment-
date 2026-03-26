@@ -51,3 +51,4 @@ desktop.ini
 # ML models cache (large files)
 .cache/
 sentence_transformers/
+.vercel

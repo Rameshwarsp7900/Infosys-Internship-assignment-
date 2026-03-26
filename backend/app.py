@@ -427,8 +427,9 @@ def chatbot():
     if not messages:
         return err("messages required")
 
-    api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("MISTRAL_API_KEY", "")
-    if not api_key:
+    mistral_key    = os.getenv("MISTRAL_API_KEY", "")
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
+    if not mistral_key and not openrouter_key:
         return err("No AI API key configured")
 
     # ── Fetch live agent data from DB ──────────────────────────
@@ -504,24 +505,41 @@ TRANSCRIPTION: Files >10min are auto-chunked into 10-min segments, processed in 
 When asked about agents, their performance, scores, or alerts — use the live data above to give accurate, specific answers.
 Be helpful, concise, and specific. Answer questions about features, troubleshooting, and best practices."""
 
-    payload = {
-        "model": os.getenv("OPENROUTER_MODEL", "mistralai/mistral-7b-instruct"),
-        "messages": [{"role": "system", "content": system}] + messages[-20:],
-        "max_tokens": 600,
-        "temperature": 0.7,
-    }
-    try:
-        r = req.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            json=payload,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            timeout=30,
-        )
-        r.raise_for_status()
-        reply = r.json()["choices"][0]["message"]["content"]
-        return ok({"reply": reply})
-    except Exception as e:
-        return err(f"Chatbot error: {str(e)}", 500)
+    convo = [{"role": "system", "content": system}] + messages[-10:]  # cap history to keep prompt short
+
+    # ── Try Mistral directly first (fastest, avoids OpenRouter latency) ──
+    mistral_key = os.getenv("MISTRAL_API_KEY", "")
+    if mistral_key:
+        try:
+            r = req.post(
+                "https://api.mistral.ai/v1/chat/completions",
+                json={"model": os.getenv("MISTRAL_MODEL", "mistral-small-latest"),
+                      "messages": convo, "max_tokens": 400, "temperature": 0.7},
+                headers={"Authorization": f"Bearer {mistral_key}", "Content-Type": "application/json"},
+                timeout=20,
+            )
+            r.raise_for_status()
+            return ok({"reply": r.json()["choices"][0]["message"]["content"]})
+        except Exception:
+            pass  # fall through to OpenRouter
+
+    # ── Fallback: OpenRouter ──────────────────────────────────────────────
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
+    if openrouter_key:
+        try:
+            r = req.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                json={"model": "mistralai/mistral-7b-instruct",
+                      "messages": convo, "max_tokens": 400, "temperature": 0.7},
+                headers={"Authorization": f"Bearer {openrouter_key}", "Content-Type": "application/json"},
+                timeout=20,
+            )
+            r.raise_for_status()
+            return ok({"reply": r.json()["choices"][0]["message"]["content"]})
+        except Exception as e:
+            return err(f"Chatbot error: {str(e)}", 500)
+
+    return err("No AI API key configured", 500)
 
 
 
