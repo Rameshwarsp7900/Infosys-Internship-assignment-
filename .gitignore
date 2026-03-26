@@ -1,0 +1,53 @@
+# Environment & secrets — NEVER commit these
+backend/config/.env
+*.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+venv/
+env/
+.venv/
+pip-log.txt
+
+# Database files (local SQLite)
+*.db
+*.sqlite
+*.sqlite3
+criterion.db
+
+# Uploads (temp files)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Logs
+backend/logs/*.log
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Vercel
+.vercel/
+
+# ML models cache (large files)
+.cache/
+sentence_transformers/

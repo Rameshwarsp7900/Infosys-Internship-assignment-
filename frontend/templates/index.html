@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Criterion QA</title>
+<link rel="icon" type="image/svg+xml" href="/static/assets/logo.svg"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+<body>
+
+<!-- ══ SPLASH SCREEN ══════════════════════════════════════════════════════ -->
+<!-- All styles are INLINE so this renders correctly before any CSS loads   -->
+<div id="splash" style="
+  position:fixed; inset:0; z-index:9999;
+  background:#0d1b2a;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  font-family:'Inter',system-ui,sans-serif;
+  transition:opacity 0.5s ease;">
+
+  <!-- Animated background circles (pure CSS, no image needed) -->
+  <div style="position:absolute;inset:0;overflow:hidden;pointer-events:none">
+    <div style="position:absolute;width:600px;height:600px;border-radius:50%;
+                background:radial-gradient(circle,rgba(0,201,167,0.08) 0%,transparent 70%);
+                top:-100px;right:-150px;animation:splashPulse 4s ease-in-out infinite"></div>
+    <div style="position:absolute;width:400px;height:400px;border-radius:50%;
+                background:radial-gradient(circle,rgba(14,165,233,0.06) 0%,transparent 70%);
+                bottom:-80px;left:-100px;animation:splashPulse 4s ease-in-out infinite 2s"></div>
+  </div>
+
+  <style>
+    @keyframes splashPulse{0%,100%{transform:scale(1);opacity:0.6}50%{transform:scale(1.1);opacity:1}}
+    @keyframes splashBar{from{width:0}to{width:100%}}
+    @keyframes splashFadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    #splash.out{opacity:0!important;pointer-events:none}
+  </style>
+
+  <!-- Logo -->
+  <div style="position:relative;z-index:1;text-align:center;animation:splashFadeIn 0.6s ease forwards">
+    <img src="/static/assets/logo.svg" alt="Criterion QA"
+         width="80" height="80"
+         style="border-radius:18px;margin-bottom:20px;
+                filter:drop-shadow(0 4px 20px rgba(0,201,167,0.4))"
+         onerror="this.src='/static/assets/logo.png'"/>
+
+    <div style="font-size:2rem;font-weight:700;color:#fff;
+                font-family:'Outfit',system-ui,sans-serif;margin-bottom:6px;letter-spacing:-0.5px">
+      Criterion <span style="color:#00c9a7">QA</span>
+    </div>
+
+    <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:48px">
+      AI-Powered Customer Support Quality Auditor
+    </div>
+
+    <!-- Progress bar -->
+    <div style="width:220px;height:3px;background:rgba(255,255,255,0.1);
+                border-radius:2px;overflow:hidden;margin:0 auto">
+      <div style="height:100%;background:#00c9a7;border-radius:2px;
+                  animation:splashBar 2.5s cubic-bezier(0.4,0,0.2,1) forwards"></div>
+    </div>
+  </div>
+
+  <!-- Skip button -->
+  <button onclick="endSplash()"
+          style="position:absolute;bottom:28px;right:28px;
+                 background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+                 color:rgba(255,255,255,0.7);padding:7px 18px;border-radius:20px;
+                 cursor:pointer;font-size:0.8rem;font-family:inherit;
+                 transition:background 0.2s;z-index:2"
+          onmouseover="this.style.background='rgba(255,255,255,0.15)'"
+          onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+    Skip →
+  </button>
+</div>
+
+<!-- ══ MAIN APP ═════════════════════════════════════════════════════════════ -->
+<div id="app" style="display:none">
+
+<!-- TOPBAR -->
+<nav class="topbar">
+  <div class="tb-brand">
+    <img src="/static/assets/logo.svg" alt="CQ" class="tb-logo-img"
+         onerror="this.src='/static/assets/logo.png'"/>
+    <span class="tb-name">Criterion <span>QA</span></span>
+  </div>
+  <div class="tb-nav">
+    <button class="tb-tab active" data-tab="analyze"      onclick="switchTab('analyze')">📄 Analyze</button>
+    <button class="tb-tab"        data-tab="batch"        onclick="switchTab('batch')">📦 Batch</button>
+    <button class="tb-tab"        data-tab="agents"       onclick="switchTab('agents')">👥 Agents</button>
+    <button class="tb-tab"        data-tab="agent-detail" id="tabDetail" style="display:none" onclick="switchTab('agent-detail')">🧑 Agent</button>
+    <button class="tb-tab"        data-tab="alerts"       onclick="switchTab('alerts')">🔔 Alerts <span class="alert-badge" id="alertBadge" style="display:none">0</span></button>
+    <button class="tb-tab"        data-tab="policy"       onclick="switchTab('policy')">📋 Policy</button>
+    <button class="tb-tab"        data-tab="history"      onclick="switchTab('history')">🕑 History</button>
+    <button class="tb-tab"        data-tab="logs"         onclick="switchTab('logs')">📊 Logs</button>
+    <button class="tb-tab"        data-tab="settings"     onclick="switchTab('settings')">⚙️</button>
+  </div>
+  <div class="tb-right">
+    <div class="tb-dot"><div class="dot" id="statusDot"></div><span id="statusLabel">Checking...</span></div>
+  </div>
+</nav>
+
+<div class="page-body">
+<aside class="sidebar">
+  <!-- 3D animated canvas -->
+  <canvas id="sidebarCanvas"></canvas>
+
+  <!-- Quick Upload shortcut -->
+  <button class="quick-upload-btn" onclick="switchTab('analyze');setTimeout(()=>document.getElementById('fileInput')?.click(),100)">
+    ⬆ Quick Upload
+  </button>
+
+  <!-- Global Metrics -->
+  <div style="font-size:.6rem;font-weight:600;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:.1em;padding:10px 4px 4px">Platform Metrics</div>
+  <div class="sb-card"><div class="sb-label">TOTAL CALLS</div><div class="sb-val" id="sbCalls">0</div></div>
+  <div class="sb-card"><div class="sb-label">AVG SCORE</div><div class="sb-val" id="sbScore">0.0</div></div>
+  <div class="sb-card"><div class="sb-label">ACTIVE ALERTS</div><div class="sb-val" id="sbAlerts" style="color:var(--red)">0</div></div>
+  <div class="sb-card"><div class="sb-label">AGENTS</div><div class="sb-val" id="sbAgents">0</div></div>
+  <!-- 3D cube decoration -->
+  <div style="margin-top:auto;padding:12px 8px 4px;opacity:.4">
+    <canvas id="sidebarCubeCanvas" width="196" height="56" style="width:100%;border-radius:8px"></canvas>
+  </div>
+</aside>
+<main class="main-content">
+
+<!-- ══ ANALYZE ══════════════════════════════════════════════════════════════ -->
+<section id="tab-analyze" class="tab active">
+  <!-- STATUS HEADER -->
+  <div class="status-header">
+    <div class="status-pill">
+      <span class="sp-label">🟢 API Health</span>
+      <span class="sp-value online" id="headerApiStatus">Online</span>
+      <span class="sp-sub" id="headerApiSub">LLM · 42ms avg</span>
+    </div>
+    <div class="status-pill amber">
+      <span class="sp-label">⚡ Processing Queue</span>
+      <span class="sp-value idle" id="headerQueue">Idle</span>
+      <span class="sp-sub" id="headerQueueSub">0 files pending</span>
+    </div>
+    <div class="status-pill purple">
+      <span class="sp-label">☁ Avg Sentiment</span>
+      <span class="sp-value neutral" id="headerSentiment">Neutral</span>
+      <span class="sp-sub">Last 50 calls</span>
+    </div>
+    <div class="score-orb-3d" id="headerScoreOrb">
+      <div class="orb-val" id="headerAvgScore">—</div>
+      <div class="orb-lbl">AVG SCORE</div>
+    </div>
+  </div>
+
+  <div class="sec-hdr">
+    <h2>Single Call Analysis</h2>
+    <p>Upload audio (MP3/M4A/WAV) or chat log (TXT). Files &gt;10 min auto-chunked.</p>
+  </div>
+  <div class="card">
+    <!-- FIX: label wraps zone → native click-to-browse, no JS needed -->
+    <label class="upload-zone" id="uploadZone" for="fileInput"
+           ondragover="ev(event,'over')" ondragleave="ev(event,'leave')" ondrop="ev(event,'drop')">
+      <div class="upload-icon">🎙️</div>
+      <p class="upload-primary">Drop file here or click to browse</p>
+      <p class="upload-hint">MP3 · M4A · WAV · OGG · TXT · Max 200MB · Long audio auto-chunked into 10-min segments</p>
+      <div class="upload-info" id="fileInfo" style="display:none">
+        <span id="fileBadge">📄</span>
+        <span id="fileName">—</span>
+        <span id="fileSize" class="file-size">—</span>
+      </div>
+    </label>
+    <input type="file" id="fileInput" accept=".mp3,.m4a,.wav,.ogg,.flac,.webm,.txt,.log"
+           style="display:none" onchange="onFileSelect(event)"/>
+    <div class="meta-grid">
+      <div class="fg"><label>Agent ID *</label><input id="agentId" placeholder="agent_001"/></div>
+      <div class="fg"><label>Agent Name</label><input id="agentName" placeholder="Jane Smith"/></div>
+      <div class="fg"><label>Team</label><input id="agentTeam" placeholder="Support"/></div>
+      <div class="fg"><label>Customer ID</label><input id="customerId" placeholder="cust_123"/></div>
+      <div class="fg"><label>Call Date</label><input type="date" id="callDate"/></div>
+    </div>
+    <button class="btn-primary" id="analyzeBtn" onclick="processFile()" disabled>🔍 Analyze Call</button>
+  </div>
+
+  <div class="alert-box alert-error" id="errBox" style="display:none">
+    <span>⚠️</span><span id="errMsg">—</span>
+    <button onclick="document.getElementById('errBox').style.display='none'">✕</button>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-card" id="loadingCard" style="display:none">
+    <div class="spinner"></div>
+    <div id="loadLabel" class="loading-label">Analyzing...</div>
+    <div class="steps-row">
+      <div class="step-pill" id="s1">🎙 Transcribe</div>
+      <div class="step-pill" id="s2">❤ Sentiment</div>
+      <div class="step-pill" id="s3">🧠 Score</div>
+      <div class="step-pill" id="s4">📋 Policy</div>
+      <div class="step-pill" id="s5">🔔 Alerts</div>
+    </div>
+    <div class="progress" style="margin-top:16px;max-width:360px;margin-inline:auto">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results" style="display:none">
+    <!-- Transcription error banner -->
+    <div id="trErrorBanner" style="display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-left:3px solid #ef4444;border-radius:12px;padding:14px 16px;margin-bottom:16px">
+      <div class="tr-err-title" id="trErrorMsg" style="font-weight:600;color:#fca5a5;font-size:0.875rem;margin-bottom:3px"></div>
+      <div class="tr-err-hint" id="trErrorHint" style="font-size:0.78rem;color:rgba(252,165,165,0.75)"></div>
+    </div>
+    <!-- KPI strip -->
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <!-- Transcription error banner -->
+    <div id="trErrorBanner" style="display:none">
+      <div class="card" style="border-left:4px solid var(--red);background:#fef2f2;margin-bottom:12px">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="font-size:1.3rem">⚠️</span>
+          <div>
+            <div style="font-weight:600;color:#dc2626;font-size:0.875rem">Transcription failed — scores are fallback values</div>
+            <div id="trErrorMsg"  style="font-size:0.78rem;color:#64748b;margin-top:2px">—</div>
+            <div id="trErrorHint" style="font-size:0.75rem;color:#94a3b8;margin-top:2px">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result header card -->
+    <div class="card">
+      <div class="result-hdr">
+        <div class="score-ring" id="scoreRing">
+          <span class="score-num" id="scoreNum">—</span>
+          <span class="score-lbl" id="scoreLbl">—</span>
+        </div>
+        <div class="result-info">
+          <h3 id="resTitle" style="word-break:break-word">—</h3>
+          <p id="resSub" style="color:var(--text2);font-size:0.82rem">—</p>
+          <div class="tags" id="resTags"></div>
+        </div>
+        <div class="f1-block">
+          <canvas id="f1Gauge" width="110" height="65"></canvas>
+          <div class="f1-label">F1: <strong id="f1Val">—</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-row">
+      <div class="card"><div class="card-title">Core metrics</div><div class="chart-wrap"><canvas id="radarChart"></canvas></div></div>
+      <div class="card"><div class="card-title">Performance</div><div class="chart-wrap"><canvas id="barChart"></canvas></div></div>
+      <div class="card"><div class="card-title">Sentiment timeline</div><div class="chart-wrap"><canvas id="sentChart"></canvas></div></div>
+    </div>
+
+    <div class="metrics-grid" id="metricsGrid"></div>
+    <div class="sent-row" id="sentRow"></div>
+
+    <div id="alertsSection" style="display:none">
+      <div class="card" style="border-left:4px solid var(--red)">
+        <div class="card-title" style="color:var(--red)">🔔 Call Alerts</div>
+        <div id="callAlerts"></div>
+      </div>
+    </div>
+
+    <div id="unparlSection" style="display:none">
+      <div class="card" style="border-left:4px solid var(--red)">
+        <div class="card-title" style="color:var(--red)">🚫 Inappropriate Language</div>
+        <table class="mini-table" id="unparlTable">
+          <thead><tr><th>Word</th><th>Speaker</th><th>Time</th><th>Context</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="violSection" style="display:none">
+      <div class="card" style="border-left:4px solid var(--amber)">
+        <div class="card-title">📋 Policy Violations</div>
+        <div id="violList"></div>
+      </div>
+    </div>
+
+    <div class="feedback-row">
+      <div class="card feedback-card fc-ok"><h4>✅ Highlights</h4><ul id="positiveList"></ul></div>
+      <div class="card feedback-card fc-bad"><h4>⚠️ Issues</h4><ul id="criticalList"></ul></div>
+      <div class="card feedback-card fc-imp"><h4>💡 Improve</h4><ul id="improveList"></ul></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:8px">📝 Summary</div>
+      <p id="summaryText" style="color:var(--text2);font-size:0.875rem;line-height:1.7">—</p>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📄 Transcript</div>
+        <div id="trMeta" style="font-size:0.75rem;color:var(--text2)">—</div>
+      </div>
+      <div class="transcript-body" id="trBody">—</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="exportResult('json')">⬇ JSON</button>
+      <button class="btn-secondary" onclick="exportResult('csv')">⬇ CSV</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══ BATCH ════════════════════════════════════════════════════════════════ -->
+<section id="tab-batch" class="tab">
+  <!-- STATUS HEADER (shared) -->
+  <div class="status-header" style="margin-bottom:18px">
+    <div class="status-pill"><span class="sp-label">🟢 API Health</span><span class="sp-value online" id="batchApiStatus">Online</span><span class="sp-sub">LLM · Ready</span></div>
+    <div class="status-pill amber"><span class="sp-label">⚡ Processing Queue</span><span class="sp-value idle" id="batchQueue">Idle</span><span class="sp-sub" id="batchQueueSub">0 files pending</span></div>
+    <div class="status-pill purple"><span class="sp-label">📊 Avg Batch Time</span><span class="sp-value idle">1.2s</span><span class="sp-sub">Per file</span></div>
+    <div class="score-orb-3d"><div class="orb-val" id="batchScoreOrb">—</div><div class="orb-lbl">AVG SCORE</div></div>
+  </div>
+  <!-- Batch mini stats -->
+  <div class="kpi-row" style="grid-template-columns:repeat(3,1fr);max-width:520px;margin-bottom:18px">
+    <div class="kpi"><div class="kpi-label">Queued Files</div><div class="kpi-val" id="batchQueuedCount">0</div><div class="kpi-sub">Ready to process</div></div>
+    <div class="kpi"><div class="kpi-label">Completed Today</div><div class="kpi-val" id="batchCompletedCount">0</div><div class="kpi-sub" style="color:var(--green)">98% Success Rate</div></div>
+    <div class="kpi"><div class="kpi-label">Total Calls</div><div class="kpi-val" id="batchTotalCalls">—</div><div class="kpi-sub">All time</div></div>
+  </div>
+  <div class="sec-hdr"><h2>Batch Processing</h2><p>Analyze up to 500 files — single or multi-agent mode.</p></div>
+  <div class="card">
+    <div class="meta-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="fg"><label>Mode</label>
+        <select id="batchMode"><option value="single_agent">Single Agent</option><option value="multi_agent">Multi-Agent</option></select>
+      </div>
+      <div class="fg"><label>Agent ID</label><input id="batchAgent" placeholder="agent_001"/></div>
+      <div class="fg"><label>Team</label><input id="batchTeam" placeholder="Support"/></div>
+    </div>
+    <label class="upload-zone" style="padding:20px" id="batchZone" for="batchInput"
+           ondragover="ev(event,'over',true)" ondragleave="ev(event,'leave',true)" ondrop="ev(event,'drop',true)">
+      <p>Drop multiple files or click to select (up to 500)</p>
+    </label>
+    <input type="file" id="batchInput" multiple accept=".mp3,.m4a,.wav,.ogg,.txt,.log"
+           style="display:none" onchange="addBatchFiles(Array.from(event.target.files))"/>
+    <table class="mini-table" id="batchTable" style="display:none">
+      <thead><tr><th>File</th><th>Size</th><th>Type</th><th>Status</th><th></th></tr></thead>
+      <tbody id="batchBody"></tbody>
+    </table>
+    <div class="btn-row">
+      <button class="btn-primary" id="batchBtn" onclick="startBatch()" disabled style="flex:1">🚀 Start Batch</button>
+      <button class="btn-secondary" onclick="clearBatch()">Clear</button>
+    </div>
+  </div>
+  <div class="loading-card" id="batchLoading" style="display:none">
+    <div class="spinner"></div><div id="batchLoadLabel">Processing...</div>
+    <div class="progress"><div class="progress-fill" id="batchFill" style="width:0%"></div></div>
+  </div>
+  <div id="batchResults" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Batch Results</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-secondary btn-sm" onclick="exportBatch('csv')">⬇ CSV</button>
+          <button class="btn-secondary btn-sm" onclick="exportBatch('json')">⬇ JSON</button>
+        </div>
+      </div>
+      <table class="mini-table">
+        <thead><tr><th>File</th><th>Agent</th><th>Score</th><th>F1</th><th>Sentiment</th><th>Alerts</th><th>Status</th></tr></thead>
+        <tbody id="batchResBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ══ AGENTS ══════════════════════════════════════════════════════════════ -->
+<section id="tab-agents" class="tab">
+  <!-- STATUS HEADER -->
+  <div class="status-header" style="margin-bottom:18px">
+    <div class="status-pill"><span class="sp-label">🟢 API Health</span><span class="sp-value online">Online</span><span class="sp-sub">LLM · 42ms avg</span></div>
+    <div class="status-pill amber"><span class="sp-label">⚡ Processing Queue</span><span class="sp-value idle">Idle</span><span class="sp-sub">0 files pending</span></div>
+    <div class="status-pill purple"><span class="sp-label">☁ Avg Sentiment</span><span class="sp-value neutral" id="agentsSentiment">Neutral</span><span class="sp-sub">Last 50 calls</span></div>
+    <div class="score-orb-3d"><div class="orb-val" id="agentsAvgScore">—</div><div class="orb-lbl">AVG SCORE</div></div>
+  </div>
+  <!-- Top / Needs Attention agents row -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px" id="agentHighlightRow">
+    <div class="card" id="topAgentCard" style="border-color:rgba(16,185,129,.2)">
+      <div style="font-size:.7rem;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">🏆 Top Performing Agent</div>
+      <div style="color:var(--text2);font-size:.82rem">Loading...</div>
+    </div>
+    <div class="card" id="needsAttentionCard" style="border-color:rgba(245,158,11,.2)">
+      <div style="font-size:.7rem;font-weight:600;color:var(--amber);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">⚠ Needs Attention</div>
+      <div style="color:var(--text2);font-size:.82rem">Loading...</div>
+    </div>
+  </div>
+  <div class="hdr-row sec-hdr">
+    <div><h2>Agent Dashboard</h2></div>
+    <div class="hdr-actions">
+      <input class="search-input" id="agentSearch" placeholder="Search agent..." oninput="renderAgents()"/>
+      <button class="btn-secondary btn-sm" onclick="loadAgents()">↻ Refresh</button>
+    </div>
+  </div>
+  <div id="agentsGrid" class="agents-grid"><div class="empty">Loading agents...</div></div>
+  <div class="card">
+    <div class="card-title">Multi-Agent Comparison</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="agentChart"></canvas></div>
+  </div>
+</section>
+
+<!-- ══ AGENT DETAIL ═════════════════════════════════════════════════════════ -->
+<section id="tab-agent-detail" class="tab">
+  <div style="margin-bottom:16px"><button class="btn-secondary btn-sm" onclick="switchTab('agents')">← All Agents</button></div>
+  <div class="card" id="agentDetailHdr">
+    <div style="display:flex;align-items:center;gap:12px;color:var(--text2)">
+      <div class="spinner" style="width:28px;height:28px;margin:0"></div>
+      <span>Loading agent data...</span>
+    </div>
+  </div>
+  <div class="charts-row">
+    <div class="card"><div class="card-title">Score trend</div><div class="chart-wrap"><canvas id="trendChart"></canvas></div></div>
+    <div class="card"><div class="card-title">Metric averages</div><div class="chart-wrap"><canvas id="agentMetricChart"></canvas></div></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Active Alerts</div>
+    </div>
+    <div id="agentAlertsList" style="font-size:.82rem;color:var(--text2)">—</div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Call History</div>
+      <input class="search-input" id="agentCallSearch" placeholder="Search..." oninput="renderAgentCalls()" style="min-width:140px"/>
+    </div>
+    <table class="mini-table">
+      <thead><tr><th>Date</th><th>File</th><th>Customer</th><th>Score</th><th>F1</th><th>Sentiment</th><th>Escalation</th><th></th></tr></thead>
+      <tbody id="agentCallsBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══ ALERTS ═══════════════════════════════════════════════════════════════ -->
+<section id="tab-alerts" class="tab">
+  <div class="hdr-row sec-hdr">
+    <div><h2>Alert Center</h2></div>
+    <div class="hdr-actions">
+      <select id="alertFilter" onchange="loadAlerts()" class="fg" style="padding:7px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:8px;font-size:0.82rem;background:rgba(255,255,255,0.07);color:var(--text)">
+        <option value="active">Active</option><option value="dismissed">Dismissed</option>
+      </select>
+      <select id="alertTypeFilter" onchange="renderAlertList()" class="fg" style="padding:7px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:8px;font-size:0.82rem;background:rgba(255,255,255,0.07);color:var(--text)">
+        <option value="">All Types</option>
+        <option value="agent">Agent Channel</option>
+        <option value="system">System Channel</option>
+        <option value="unparliamentary_language">Inappropriate Language</option>
+        <option value="low_quality_score">Low Score</option>
+        <option value="sentiment_escalation">Escalation</option>
+        <option value="policy_violation">Policy</option>
+        <option value="sla_breach">SLA Breach</option>
+      </select>
+      <button class="btn-secondary btn-sm" onclick="loadAlerts()">↻</button>
+    </div>
+  </div>
+  <!-- Dual channel summary -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+    <div class="card" style="border-top:3px solid var(--teal)">
+      <div style="font-weight:600;font-size:0.82rem;margin-bottom:8px;color:var(--teal)">👤 Agent / QA Channel</div>
+      <div id="agentChannelSummary" style="font-size:0.78rem;color:var(--text2)">Loading...</div>
+    </div>
+    <div class="card" style="border-top:3px solid var(--red)">
+      <div style="font-weight:600;font-size:0.82rem;margin-bottom:8px;color:var(--red)">⚙️ System / IT Channel</div>
+      <div id="systemChannelSummary" style="font-size:0.78rem;color:var(--text2)">Loading...</div>
+    </div>
+  </div>
+  <div class="alerts-summary" id="alertsSummary"></div>
+  <div class="alerts-list" id="alertsList"></div>
+</section>
+
+<!-- ══ POLICY ═══════════════════════════════════════════════════════════════ -->
+<section id="tab-policy" class="tab">
+  <div class="sec-hdr"><h2>Policy Management</h2><p>Upload company policy (TXT or PDF). Every call is checked against it using semantic search.</p></div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:12px">Upload Policy Document</div>
+    <div class="meta-grid" style="grid-template-columns:1fr 1fr">
+      <div class="fg"><label>Title</label><input id="policyTitle" placeholder="Customer Support Policy v1"/></div>
+      <div class="fg"><label>File (TXT or PDF)</label><input type="file" id="policyFile" accept=".txt,.md,.pdf"/></div>
+    </div>
+    <button class="btn-secondary" onclick="uploadPolicy()" style="width:auto">📤 Index Document</button>
+    <div id="policyMsg" style="font-size:0.82rem;color:var(--green);margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Indexed Documents</div><button class="btn-secondary btn-sm" onclick="loadPolicies()">↻</button></div>
+    <div id="policyList">Loading...</div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:10px">🔍 Semantic Search</div>
+    <div style="display:flex;gap:8px">
+      <input class="search-input" id="ragQuery" placeholder="e.g. how should agent greet customer?" style="flex:1"/>
+      <button class="btn-secondary" onclick="searchPolicy()">Search</button>
+    </div>
+    <div id="ragResults" style="margin-top:12px"></div>
+  </div>
+</section>
+
+<!-- ══ HISTORY ══════════════════════════════════════════════════════════════ -->
+<section id="tab-history" class="tab">
+  <!-- History Stats Header -->
+  <div class="hist-stats-row">
+    <div class="hist-stat-pill">
+      <div class="hsp-label">Last 7 Days</div>
+      <div class="hsp-val" id="histTotalScans">—</div>
+      <div class="hsp-sub">Total scans</div>
+    </div>
+    <div class="hist-stat-pill" style="--pill-color:var(--green)">
+      <div class="hsp-label" style="color:var(--green)">Trend</div>
+      <div class="hsp-val" id="histTrend" style="color:var(--green)">—</div>
+      <div class="hsp-sub">Since last week</div>
+    </div>
+    <div class="hist-stat-pill">
+      <div class="hsp-label">Compliance Avg</div>
+      <div class="hsp-val" id="histCompliance">—</div>
+      <div class="hsp-sub">Goal: 95%</div>
+    </div>
+  </div>
+  <div class="hdr-row sec-hdr">
+    <div><h2>History</h2></div>
+    <div class="hdr-actions">
+      <input class="search-input" id="histSearch" placeholder="Search..." oninput="renderHistory()"/>
+      <button class="btn-secondary btn-sm" onclick="clearHistory()">🗑 Clear</button>
+    </div>
+  </div>
+  <div class="card">
+    <table class="mini-table">
+      <thead><tr><th>Date</th><th>File</th><th>Agent</th><th>Score</th><th>Sentiment</th><th>F1</th><th></th></tr></thead>
+      <tbody id="histBody"></tbody>
+    </table>
+    <div class="pagination" id="histPages"></div>
+  </div>
+</section>
+
+<!-- ══ LOGS ═════════════════════════════════════════════════════════════════ -->
+<section id="tab-logs" class="tab">
+  <div class="hdr-row sec-hdr">
+    <div><h2>Event Logs</h2><p>Structured JSON logs from pipeline, transcription, LLM, and alerts.</p></div>
+    <div class="hdr-actions">
+      <select id="logLevel" onchange="loadLogs()" class="fg" style="padding:7px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:8px;font-size:0.82rem;background:rgba(255,255,255,0.07);color:var(--text)">
+        <option value="">All</option><option value="INFO">INFO</option><option value="WARNING">WARNING</option><option value="ERROR">ERROR</option>
+      </select>
+      <button class="btn-secondary btn-sm" onclick="loadLogs()">↻</button>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--text2);cursor:pointer">
+        <input type="checkbox" id="autoRefreshLogs" onchange="toggleAutoRefresh()"/> Auto 5s
+      </label>
+    </div>
+  </div>
+  <div class="card">
+    <div id="logsContainer" style="font-family:monospace;font-size:0.75rem;max-height:600px;overflow-y:auto;background:#0d1b2a;color:#e2e8f0;border-radius:8px;padding:16px">
+      <div style="color:rgba(255,255,255,0.4)">Click refresh to load logs...</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ SETTINGS ═════════════════════════════════════════════════════════════ -->
+<section id="tab-settings" class="tab">
+  <div class="sec-hdr"><h2>Settings</h2></div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">API Health</div>
+    <button class="btn-secondary btn-sm" onclick="checkHealth(false)">↻ Check</button></div>
+    <pre id="healthOut" style="font-size:0.75rem;background:#f8fafc;padding:12px;border-radius:8px;overflow-x:auto;margin-top:10px"></pre>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:12px">🔔 Notification Channels</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="background:#f0fdf4;border-radius:8px;padding:12px;border:1px solid #d1fae5">
+        <div style="font-weight:600;font-size:0.82rem;color:var(--green);margin-bottom:8px">👤 Channel 1 — Agent / QA</div>
+        <div id="agentNotifStatus" style="font-size:0.78rem;color:var(--text2)">Loading...</div>
+        <div style="font-size:0.72rem;color:var(--text2);margin-top:6px">Triggers: low scores, language, escalation, policy</div>
+        <button class="btn-secondary btn-sm" style="margin-top:8px" onclick="testAgentChannel()">Test Channel 1</button>
+      </div>
+      <div style="background:#fef2f2;border-radius:8px;padding:12px;border:1px solid #fecaca">
+        <div style="font-weight:600;font-size:0.82rem;color:var(--red);margin-bottom:8px">⚙️ Channel 2 — System / IT</div>
+        <div id="systemNotifStatus" style="font-size:0.78rem;color:var(--text2)">Loading...</div>
+        <div style="font-size:0.72rem;color:var(--text2);margin-top:6px">Triggers: API failures, processing errors, SLA</div>
+        <button class="btn-secondary btn-sm" style="margin-top:8px" onclick="testSystemChannel()">Test Channel 2</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:8px">System Info</div>
+    <div id="sysStats" style="font-size:0.875rem;color:var(--text2)">Loading...</div>
+  </div>
+</section>
+
+</main>
+</div><!-- /page-body -->
+</div><!-- /app -->
+
+<script src="/static/js/script.js"></script>
+<!-- ══ CHATBOT WIDGET ═════════════════════════════════════════════════════ -->
+<button id="chatBtn" title="Criterion AI Assistant" onclick="toggleChat()">🤖</button>
+<div id="chatPanel">
+  <div class="chat-header">
+    <div class="chat-header-avatar">🤖</div>
+    <div class="chat-header-info">
+      <div class="chat-header-name">Criterion Assistant</div>
+      <div class="chat-header-status"><span style="width:6px;height:6px;border-radius:50%;background:var(--teal);display:inline-block"></span> Online · Powered by Mistral</div>
+    </div>
+    <button class="chat-header-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div id="chatMessages">
+    <div class="chat-msg bot">
+      <div class="chat-msg-bubble">👋 Hi! I'm your Criterion QA assistant. Ask me anything about the platform — or ask about specific agents, their scores, alerts, and performance data pulled live from the database!</div>
+    </div>
+  </div>
+  <div class="chat-suggestions">
+    <span class="chat-suggest" onclick="chatAsk('How do I analyze a call?')">How to analyze?</span>
+    <span class="chat-suggest" onclick="chatAsk('What do quality metrics mean?')">Metrics guide</span>
+    <span class="chat-suggest" onclick="chatAsk('List all agents and their scores')">Agent scores</span>
+    <span class="chat-suggest" onclick="chatAsk('Which agent has the most active alerts?')">Alert summary</span>
+    <span class="chat-suggest" onclick="chatAsk('Who is the top performing agent?')">Top agent</span>
+    <span class="chat-suggest" onclick="chatAsk('How does batch processing work?')">Batch mode</span>
+  </div>
+  <div class="chat-footer">
+    <input id="chatInput" placeholder="Ask anything about Criterion QA..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"/>
+    <button id="chatSendBtn" onclick="sendChat()">➤</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  3D SIDEBAR CANVAS
+// ══════════════════════════════════════════════════════
+(function(){
+  const canvas = document.getElementById('sidebarCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let raf, t = 0;
+  const W = () => canvas.offsetWidth;
+  const H = () => canvas.height;
+  canvas.height = 76;
+
+  function resize(){ canvas.width = canvas.offsetWidth; }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Floating 3D-ish cubes
+  const cubes = Array.from({length:6}, (_,i) => ({
+    x: 20 + i * 34, y: 30 + Math.sin(i*1.2)*14,
+    size: 8 + Math.random()*8,
+    speed: .4 + Math.random()*.6,
+    phase: i * 1.1,
+    color: i%2===0 ? '#00c9a7' : '#7c3aed',
+  }));
+
+  function drawCube(x, y, s, color, alpha){
+    const a2 = s * 0.5;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    // Top face
+    ctx.beginPath();
+    ctx.moveTo(x, y-a2);
+    ctx.lineTo(x+a2, y-a2*0.5);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x-a2, y-a2*0.5);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    // Left face
+    ctx.beginPath();
+    ctx.moveTo(x-a2, y-a2*0.5);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x, y+a2);
+    ctx.lineTo(x-a2, y+a2*0.5);
+    ctx.closePath();
+    ctx.fillStyle = color + '99';
+    ctx.fill();
+    // Right face
+    ctx.beginPath();
+    ctx.moveTo(x+a2, y-a2*0.5);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x, y+a2);
+    ctx.lineTo(x+a2, y+a2*0.5);
+    ctx.closePath();
+    ctx.fillStyle = color + '55';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function frame(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    t += 0.02;
+    cubes.forEach(c => {
+      const py = c.y + Math.sin(t * c.speed + c.phase) * 10;
+      const px = c.x + Math.cos(t * c.speed * 0.5 + c.phase) * 3;
+      const alpha = 0.4 + 0.3 * Math.sin(t + c.phase);
+      drawCube(px, py, c.size, c.color, alpha);
+    });
+    // Connecting lines
+    ctx.strokeStyle = 'rgba(0,201,167,0.12)';
+    ctx.lineWidth = 1;
+    for(let i=0;i<cubes.length-1;i++){
+      const a = cubes[i], b = cubes[i+1];
+      const ay = a.y + Math.sin(t*a.speed+a.phase)*10;
+      const by = b.y + Math.sin(t*b.speed+b.phase)*10;
+      ctx.beginPath();
+      ctx.moveTo(a.x, ay);
+      ctx.lineTo(b.x, by);
+      ctx.stroke();
+    }
+    raf = requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
+// ══════════════════════════════════════════════════════
+//  CHATBOT
+// ══════════════════════════════════════════════════════
+let chatHistory = [];
+let chatOpen = false;
+
+function toggleChat(){
+  chatOpen = !chatOpen;
+  const btn = document.getElementById('chatBtn');
+  const panel = document.getElementById('chatPanel');
+  btn.classList.toggle('open', chatOpen);
+  if (chatOpen){
+    panel.classList.add('show');
+    document.getElementById('chatInput')?.focus();
+  } else {
+    panel.classList.remove('show');
+    setTimeout(()=>{ panel.style.display='none'; panel.style.display=''; }, 300);
+  }
+}
+
+function chatAsk(msg){
+  document.getElementById('chatInput').value = msg;
+  sendChat();
+}
+
+async function sendChat(){
+  const inp = document.getElementById('chatInput');
+  const msg = (inp.value||'').trim();
+  if(!msg) return;
+  inp.value = '';
+  inp.disabled = true;
+
+  appendChatMsg(msg, 'user');
+  chatHistory.push({role:'user', content:msg});
+
+  // Typing indicator
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'chat-msg bot';
+  typingDiv.innerHTML = '<div class="chat-typing"><span></span><span></span><span></span></div>';
+  document.getElementById('chatMessages').appendChild(typingDiv);
+  scrollChatBottom();
+
+  try {
+    const r = await fetch('/api/chatbot', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({messages: chatHistory.slice(-20)})
+    });
+    const d = await r.json();
+    typingDiv.remove();
+    const reply = d.reply || d.error || 'Sorry, I couldn\'t get a response.';
+    chatHistory.push({role:'assistant', content:reply});
+    appendChatMsg(reply, 'bot');
+  } catch(e) {
+    typingDiv.remove();
+    appendChatMsg('Connection error: ' + e.message, 'bot');
+  }
+  inp.disabled = false;
+  inp.focus();
+}
+
+function appendChatMsg(text, role){
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  // Simple markdown-ish: bold **text**, newlines
+  const safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+  div.innerHTML = `<div class="chat-msg-bubble">${safe}</div>`;
+  document.getElementById('chatMessages').appendChild(div);
+  scrollChatBottom();
+}
+
+function scrollChatBottom(){
+  const el = document.getElementById('chatMessages');
+  if(el) el.scrollTop = el.scrollHeight;
+}
+
+// ══════════════════════════════════════════════════════
+//  POLICY DELETE
+// ══════════════════════════════════════════════════════
+async function deletePolicy(docId, title){
+  if(!confirm(`Delete policy "${title}"?\n\nThis cannot be undone.`)) return;
+  try {
+    const r = await fetch('/api/policy/'+docId, {method:'DELETE'});
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    loadPolicies();
+  } catch(e) {
+    alert('Delete failed: ' + e.message);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  OVERRIDE loadPolicies to include delete buttons
+// ══════════════════════════════════════════════════════
+const _origLoadPolicies = typeof loadPolicies !== 'undefined' ? loadPolicies : null;
+async function loadPolicies(){
+  try{
+    const d = await fetch('/api/policy').then(r=>r.json());
+    const docs = d.documents||[];
+    const el = document.getElementById('policyList');
+    if(!el) return;
+    if(!docs.length){
+      el.innerHTML='<p style="color:var(--text2);font-size:.85rem;padding:10px 0">No policies yet. Upload a document above.</p>';
+      return;
+    }
+    el.innerHTML = docs.map(doc=>`
+      <div class="policy-doc-item">
+        <div class="policy-doc-info">
+          <strong>${doc.title||'Unnamed Policy'}</strong>
+          <span class="doc-date">${(doc.created_at||'').slice(0,10)||'—'}</span>
+        </div>
+        <div class="policy-doc-actions">
+          <button class="btn-secondary btn-sm btn-danger" onclick="deletePolicy('${doc.doc_id}','${(doc.title||'').replace(/'/g,"\\'")}')" title="Delete policy">
+            🗑 Delete
+          </button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    const el = document.getElementById('policyList');
+    if(el) el.textContent='Could not load policies.';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  TRANSCRIPTION ERROR FIX - ensure banner shown
+// ══════════════════════════════════════════════════════
+// Patch displayResults to handle trErrorBanner safely
+document.addEventListener('DOMContentLoaded', function(){
+  // Ensure trErrorBanner exists
+  const existing = document.getElementById('trErrorBanner');
+  if(!existing){
+    const banner = document.createElement('div');
+    banner.id = 'trErrorBanner';
+    banner.style.display = 'none';
+    banner.innerHTML = '<div class="tr-err-title" id="trErrorMsg"></div><div class="tr-err-hint" id="trErrorHint"></div>';
+    const results = document.getElementById('results');
+    if(results) results.prepend(banner);
+  }
+});
+
+// Safe innerHTML helper to avoid null errors
+function safeHTML(id, html){
+  const el = document.getElementById(id);
+  if(el) el.innerHTML = html;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+CRITERION CUSTOMER SUPPORT QUALITY POLICY
+Version 2.0 | Effective: January 2026
+===========================================
+
+SECTION 1: AGENT GREETING AND IDENTIFICATION
+
+1.1 Every agent MUST introduce themselves by full name at the start of every call.
+Example: "Thank you for calling [Company]. My name is [Agent Name]. How can I help you today?"
+
+1.2 Agents MUST state the company name within the first 10 seconds of the call.
+
+1.3 For inbound calls, agents MUST verify the customer's identity before accessing any account information.
+Acceptable verification methods: date of birth, last 4 digits of account number, registered email address.
+
+1.4 Agents must NEVER skip the greeting or go directly to problem-solving without introduction.
+
+SECTION 2: CUSTOMER VERIFICATION
+
+2.1 Identity verification is MANDATORY before disclosing any account details.
+
+2.2 Agents must attempt verification at least twice before escalating to a supervisor.
+
+2.3 Agents must NEVER share account balances, order details, or personal information without successful verification.
+
+2.4 If a customer refuses verification, the agent must politely explain policy and offer to assist with general queries only.
+
+SECTION 3: TONE AND PROFESSIONAL CONDUCT
+
+3.1 Agents MUST maintain a professional, calm, and respectful tone at all times.
+
+3.2 Agents MUST NOT use derogatory, dismissive, or offensive language under any circumstances.
+
+3.3 Agents MUST NOT interrupt customers mid-sentence. Allow customers to finish speaking.
+
+3.4 Agents MUST use empathetic language when a customer expresses frustration:
+Acceptable: "I understand your frustration and I will do my best to help."
+Unacceptable: "I can't help with that", "That's not my department", "Deal with it."
+
+3.5 Agents MUST NOT make personal remarks or engage in non-business conversations for more than 30 seconds.
+
+SECTION 4: RESOLUTION AND ESCALATION
+
+4.1 Agents MUST offer a concrete resolution or next step on EVERY call.
+
+4.2 Unresolved issues MUST be escalated to a supervisor within 5 minutes.
+
+4.3 Agents MUST NEVER promise outcomes they are not authorized to deliver, including:
+- Refunds above $50 without manager approval
+- Service credits or discounts without authorization
+- Same-day delivery guarantees
+- Legal advice or commitments
+
+4.4 If a customer requests to speak to a supervisor, the agent MUST honor that request within 2 minutes.
+
+SECTION 5: CALL CLOSING
+
+5.1 Agents MUST summarize the resolution or actions taken before ending the call.
+
+5.2 Agents MUST ask "Is there anything else I can help you with?" before closing.
+
+5.3 Agents MUST thank the customer for calling and use a professional closing:
+Example: "Thank you for choosing [Company]. Have a great day!"
+
+5.4 Agents MUST NOT end the call while the customer is still speaking.
+
+SECTION 6: DATA PRIVACY AND COMPLIANCE
+
+6.1 Agents MUST NOT discuss customer account details in public or with unauthorized persons.
+
+6.2 Call recordings are subject to data protection regulations. Agents MUST inform customers if the call is recorded.
+
+6.3 Agents MUST NEVER request passwords or full card numbers verbally.
+
+6.4 PCI DSS compliance: Credit card information may only be collected via the secure IVR system, never verbally by an agent.
+
+6.5 GDPR compliance: Customers have the right to request data deletion. Any such request must be documented and escalated to the Data Team within 24 hours.
+
+SECTION 7: FIRST CALL RESOLUTION (FCR)
+
+7.1 The target First Call Resolution rate is 75% or above.
+
+7.2 Agents MUST exhaust all available resources (knowledge base, tools, supervisor consultation) before referring a customer to a callback.
+
+7.3 Callbacks MUST be scheduled within 24 hours if FCR cannot be achieved.
+
+SECTION 8: PERFORMANCE STANDARDS
+
+8.1 Average Handle Time (AHT) target: ≤ 8 minutes per call.
+
+8.2 Customer Satisfaction Score (CSAT) target: ≥ 4.0 / 5.0.
+
+8.3 Quality Assurance (QA) target score: ≥ 7.0 / 10.0.
+
+8.4 Compliance score target: ≥ 8.0 / 10.0. Agents scoring below 6.0 must complete mandatory retraining.
